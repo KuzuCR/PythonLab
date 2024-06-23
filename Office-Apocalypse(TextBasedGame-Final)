@@ -1,0 +1,176 @@
+from time import sleep
+import sys
+import re
+
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
+available_exits = {"Lobby":{"north":["Office Room"], "south":["Break Room"], "east":["Server Room"], "west":["Restraunt"]},
+        "Office Room":{"east":["Closet"]},
+        "Closet":{"west":["Office Room"]},
+        "Break Room":{"west":["Fire Exit"], "north": ["Lobby"]},
+        "Fire Exit":{"west":["Break Room"]},
+        "Server Room":{"west":["Lobby"]},
+        "Restraunt":{"west":["Lobby"],"north":["Kitchen"]},
+        "Kitchen":{"south":["Restraunt"]},
+        "Win": {""},
+        "Exit":{""}}
+
+items={"Lobby":["monitor"],
+       "Office Room":["powersupply"],
+       "Closet":["keyboard"],
+       "Break Room":["mouse"],
+       "Fire Exit":["flashdrive"],
+       "Server Room":[""],
+       "Restraunt":["processor"],
+       "Kitchen":["graphiccard"],
+       "Win":["Victory Trophy"],
+       "Exit":[]}
+
+all_items = {"powersupply, keyboard, mouse, flashdrive, graphiccard, processor, ram"}
+
+blocked={"armory":"crossbow"}
+
+main_rooms={"Lobby":"You awaken in an empty lobby. The lights are dim. Where is everyone?",
+       "Office Room":"A meeting room. A long table sits in the center",
+       "Closet":"A storage closet, it is dusty in here. There are some cleaning supplies lying around.",
+        "Break Room":"The lunch area, you remember taking up small talk here",
+        "Fire Exit":"an emergency exit, looks like it hasn't been used in a while",
+        "Server Room":"The boss room, now you must stop the malware.",
+        "Restraunt":"A sandwich shop that made good food",
+        "Kitchen":"The food is prepared in here. Doesn't look like much",
+        "Win": "Congratulations on winning. Here is your trophy, collect it.",
+       "Exit":"You have lost the game. Thanks for playing."}
+
+inventory=[]
+
+
+def slow(input):
+    for x in input:
+        print(x, end='')
+        sys.stdout.flush()
+        sleep(0.04)
+
+
+def startGame():
+    slow((f"{bcolors.FAIL}\nA malicious hacker has attacked your office with malware. Everyone else is gone, it is up to you to stop him{bcolors.ENDC}"))
+    slow((f"{bcolors.FAIL}\nYou have to collect all 7 items we need and then enter the boss room{bcolors.ENDC}"))
+
+    slow(f"{bcolors.WARNING}\nYou can use the following commands:\nGO - move north, south, east, west (ex: walk south)\nMOVE - move an entity (ex: move sword)\nCOLLECT - collect an entity (ex: collect key){bcolors.ENDC}")
+    slow(f"{bcolors.BOLD}\nYou have the following items: {inventory}{bcolors.ENDC}")
+
+
+def viewInventory(inventory):
+    slow(f"{bcolors.BOLD}You have the following items: {inventory}{bcolors.ENDC}")
+
+def checkAllItems(entity):
+    allItems = True
+    if entity in all_items:
+        if entity != all_items:
+            allItems = False
+    if (allItems == True): print("Equal")
+    else: print("Not equal")
+
+def walk(pathway,room):
+    valid=False
+    if pathway in available_exits[room]:
+        if len(available_exits[room][pathway])==1:
+            valid=True
+        elif len(available_exits[room][pathway])>1:
+            if available_exits[room][pathway][1] in inventory:
+                valid=True
+    if valid==True:
+        room=available_exits[room][pathway][0]
+        display_room(room)
+        if room == "Server Room":
+            if len(inventory) < 6:
+                print("You have attacked the boss but due to not having collected all the items you have died")
+                room="Exit"
+                display_room("Exit")
+            else:
+                print("You have used your collected items against the hacker. He has been stopped.")
+                display_room("Win")
+
+
+
+
+    else:
+        print("Try again. Your currently available exits are, ",available_exits[room])
+    return room
+
+def display_room(room):
+    print("\nYou are located at:",room,"-=-", main_rooms[room])
+    if len(items[room]) > 0:
+        print("Objects:")
+        for entity in items[room]:
+            if entity not in blocked.values():
+                print(entity)
+
+
+
+def move(entity,room):
+    if entity in blocked and entity in items[room]:
+        print("With great effort you move the ",entity,"revealing a: ",blocked[entity])
+        del blocked[entity]
+    else:
+        print("You cannot move this entity currently.")
+
+def collect(entity,room):
+    if entity in items[room]:
+        inventory.append(entity)
+        print(entity,"has been added to your inventory.")
+    elif entity in all_items:
+        print(entity, "This item is in a different room. Try to find it!")
+    else:
+        print("This item does not exist. Try again.")
+
+
+
+if __name__ == "__main__":
+    startGame()
+    currentRoom="Lobby"
+    display_room(currentRoom)
+    while True:
+        command=input(" -=- ")
+        command=command.split()
+        checkLength = len(command)
+        isPlayerAlive=True
+
+
+        if command[0].lower()=="walk":
+            if checkLength <= 1:
+                print("You must input two arguments")
+                continue
+            currentRoom=walk(command[1].lower(),currentRoom)
+            if currentRoom=="Exit":
+                break
+            elif currentRoom=="Win":
+                break
+        elif command[0].lower()=="move":
+            if checkLength <= 1:
+                print("You must input two arguments")
+                continue
+            move(command[1],currentRoom)
+        elif command[0].lower()=="collect":
+            filtered= re.sub(r'[\W_]', '', command[1]).lower()
+            collect(filtered,currentRoom)
+        elif command[0].lower()=="inventory":
+            viewInventory(inventory)
+
+        elif command[0].lower()=="exit":
+            display_room("Exit")
+            break
+
+        elif command[0].lower()=="leave":
+            break
+        else:
+            print("I'm sorry I didn't understand that command.")
